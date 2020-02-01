@@ -1,6 +1,6 @@
 from nuscenes.nuscenes import NuScenes
+import numpy as np
 import cv2
-import matplotlib.pyplot as plt
 
 sensor = 'CAM_FRONT'
 scene_id = 1
@@ -31,11 +31,22 @@ if __name__ == '__main__':
 		image = cv2.imread(root_path+filename)
 
 		# Use Canny edge detection on the grayscale image
-		gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-		edges = cv2.Canny(gray,100,200)
+		gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)	
+		gray = cv2.GaussianBlur(gray, (5, 5), 0)
+		edges = cv2.Canny(gray,50,200)
 
+		# Use region mask on the lower part of the image
+		# to remove the lines outside the road
+		height, width = gray.shape
+		polygons = np.array([[(0, height-200), (width//2, height//2), (width, height-200)]])
+		mask = np.zeros_like(gray)
+		cv2.fillPoly(mask, polygons, 255)
+		filtered_edges = cv2.bitwise_and(edges, mask)
 
-		vis = cv2.resize(edges, (720, 480))  
+		# hough = cv2.HoughLinesP(filtered_edges, 2, np.pi / 180, 100, np.array([]), minLineLength = 100, maxLineGap = 50)
+		# print(hough)
+
+		vis = cv2.resize(filtered_edges, (720, 480))  
 		cv2.imshow("Video", vis)  
 		cv2.waitKey(30) 
 	cv2.destroyAllWindows()
