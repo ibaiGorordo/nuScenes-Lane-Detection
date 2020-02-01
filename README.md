@@ -1,4 +1,4 @@
-# nuScene-Lane-Detection (In progress)
+# nuScenes-Lane-Detection (In progress)
 
 Lane detection program (Python) for the nuScenes mini dataset.
 
