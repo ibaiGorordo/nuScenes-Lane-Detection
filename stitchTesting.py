@@ -3,9 +3,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 
-sensor_names = ["CAM_FRONT","CAM_FRONT_RIGHT","CAM_BACK_RIGHT","CAM_BACK","CAM_BACK_LEFT","CAM_FRONT_LEFT"]
+# sensor_names = ["CAM_FRONT","CAM_FRONT_RIGHT","CAM_BACK_RIGHT","CAM_BACK","CAM_BACK_LEFT","CAM_FRONT_LEFT"]
+sensor_names = ["CAM_FRONT","CAM_FRONT_RIGHT"]
 scene_id = 0
 root_path = 'data/sets/nuscenes/'
+image_overlap = 15/100 
 
 def GetFilenameList(sensor_list='CAM_FRONT',scene_id=0):
 
@@ -43,36 +45,56 @@ def StichImages(img_left,img_right):
 	gray_left = cv2.cvtColor(img_left,cv2.COLOR_BGR2GRAY)
 	gray_right = cv2.cvtColor(img_right,cv2.COLOR_BGR2GRAY)
 	height, width = gray_left.shape
-	gray_left = gray_left[:,round(width*0.90):]
-	gray_right = gray_right[:,:round(width*0.10)]
+	gray_left = gray_left[:,round(width*(1-image_overlap)):]
+	gray_right = gray_right[:,:round(width*image_overlap)]
 
-	sift = cv2.ORB_create()
+	# sift = cv2.ORB_create()
+	sift = cv2.xfeatures2d.SIFT_create(edgeThreshold=10)
 
 	# find key points
 	kp_left, des_left = sift.detectAndCompute(gray_left,None)
 	kp_right, des_right = sift.detectAndCompute(gray_right,None)
 
-	# Brute force match the descriptors
-	bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-	matches = bf.match(des_left,des_right)
+	# # Brute force match the descriptors
+	# bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+	# matches = bf.match(des_left,des_right)
+	# matches = sorted(matches, key = lambda x:x.distance)
+	# matches = [match for match in matches if match.distance < 50]
+	# src_pts = np.float32([ kp_right[m.trainIdx].pt for m in matches ]).reshape(-1,1,2)
+	# dst_pts = np.float32([tuple(sum(x) for x in zip(kp_left[m.queryIdx].pt, (round(width*(1-image_overlap)),0))) for m in matches]).reshape(-1,1,2)
 
-	matches = sorted(matches, key = lambda x:x.distance)
-	matches = [match for match in matches if match.distance < 30]
+	bf = cv2.BFMatcher()
+	matches = bf.knnMatch(des_left,des_right, k=2)
 
-	src_pts = np.float32([ kp_right[m.trainIdx].pt for m in matches ]).reshape(-1,1,2)
-	dst_pts = np.float32([tuple(sum(x) for x in zip(kp_right[m.trainIdx].pt, (round(width*0.9),0))) for m in matches]).reshape(-1,1,2)
+	# Apply ratio test
+	good = []
+	for m in matches:
+		if m[0].distance < 0.5*m[1].distance:
+			good.append(m)
+	matches = np.asarray(good)
+	
+	src_pts = np.float32([ kp_right[m.trainIdx].pt for m in matches[:,0]]).reshape(-1,1,2)
+	dst_pts = np.float32([tuple(sum(x) for x in zip(kp_left[m.queryIdx].pt, (round(width*(1-image_overlap)),0))) for m in matches[:,0]]).reshape(-1,1,2)
 
+	
 	M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+
+	# Matrix obtained averaging the matrices of various good stiches
+	M = np.array([[-2.76926139e-02,  8.82836032e-02,  1.39366897e+03],
+ 		[-2.94342047e-01,  9.48160747e-01,  2.81456705e+01],
+ 		[-6.24142082e-04,  1.45840918e-05,  1.00000000e+00]])
+
+	# print(M)
 	matchesMask = mask.ravel().tolist()
 	
 	good = [matches[i] for i in range(len(matches)) if matchesMask[i]==1]
 
 	stiched_img = cv2.warpPerspective(img_right,M,(img_left.shape[1] + img_right.shape[1], img_left.shape[0]))
 	stiched_img[0:img_left.shape[0], 0:img_left.shape[1]] = img_left
-	img3 = cv2.drawMatches(gray_left,kp_left,gray_right,kp_right,good,None)
-	vis = cv2.resize(img3, (720, 480))  
-	cv2.imshow("matches",vis)
-	cv2.waitKey(0) 
+	# img3 = cv2.drawMatches(gray_left,kp_left,gray_right,kp_right,good,None)
+	# vis = cv2.resize(img3, (720, 480))  
+	# cv2.imshow("matches",vis)
+	# cv2.waitKey(0) 
 
 	return stiched_img
 
@@ -109,9 +131,11 @@ if __name__ == '__main__':
 		stiched_img = images[0]
 		count = 0
 		for image in images[1:]:
-			stiched_img = StichImages(trim(stiched_img),image)
+			try:
+				stiched_img = StichImages(trim(stiched_img),image)
+			except:
+				print("No match")
 			count += 1
-			print(count)
 
 		vis = cv2.resize(stiched_img, (720, 480))  
 		cv2.imshow("stiched", vis)
