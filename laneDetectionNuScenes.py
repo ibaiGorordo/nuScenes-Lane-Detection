@@ -7,6 +7,9 @@ import cv2
 sensor_names = ["CAM_FRONT"]
 scene_id = 3
 root_path = 'data/sets/nuscenes/'
+lower_limit = np.array([120,150,180])
+upper_limit = np.array([220,220,220])
+kernel = np.ones((15,15),np.uint8)
 
 # Point order: Top-Left, Top-Right, Bottom-Left, Bottom-Right
 input_points = np.array([[600,565],[1100,565],[1600,900],[70,900]], dtype = "float32")
@@ -73,10 +76,12 @@ if __name__ == '__main__':
 
 			image = cv2.undistort(image, intrinsic_matrix, None)
 			image = TransformImagePerspective(input_points,image)
-			cv2.imshow("Transformed", image)
-			gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)	
-			# gray = cv2.GaussianBlur(gray, (3, 3), 0)
-			edges = cv2.Canny(gray,50,150)
+			cv2.imshow("Transformed", cv2.resize(image, (720, 480)))
+
+			mask = cv2.inRange(image, lower_limit, upper_limit)
+			mask = cv2.dilate(mask,kernel,iterations = 1)
+
+			edges = cv2.Canny(mask,50,150)
 			vis = cv2.resize(edges, (720, 480))  
 			cv2.imshow("Edges", vis)
 			cv2.waitKey(10) 
