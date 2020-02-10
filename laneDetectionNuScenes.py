@@ -30,7 +30,7 @@ def TransformImagePerspective(input_points,input_image):
 	transformed_image = cv2.warpPerspective(input_image, M, (bottom_width, height))
 	return transformed_image
 
-def GetFilenameList(sensor_list='CAM_FRONT',scene_id=0):
+def GetFilenameList(sensor_list=['CAM_FRONT'],scene_id=0):
 
 	# Get the first sample in the selected scene
 	current_sample = nusc.get('sample', nusc.scene[scene_id]['first_sample_token'])
@@ -49,7 +49,7 @@ def GetFilenameList(sensor_list='CAM_FRONT',scene_id=0):
 		current_sample = nusc.get('sample', current_sample["next"])
 	return filename_list
 
-def GetSensorCalibration(sensor_list='CAM_FRONT',scene_id=0):
+def GetSensorCalibration(sensor_list=['CAM_FRONT'],scene_id=0):
 
 	# Get the first sample in the selected scene
 	current_sample = nusc.get('sample', nusc.scene[scene_id]['first_sample_token'])
