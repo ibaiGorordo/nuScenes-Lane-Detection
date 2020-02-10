@@ -9,7 +9,7 @@ scene_id = 0
 root_path = 'data/sets/nuscenes/'
 image_overlap = 15/100 
 
-def GetFilenameList(sensor_list='CAM_FRONT',scene_id=0):
+def GetFilenameList(sensor_list=['CAM_FRONT'],scene_id=0):
 
 	# Get the first sample in the selected scene
 	current_sample = nusc.get('sample', nusc.scene[scene_id]['first_sample_token'])
@@ -28,7 +28,7 @@ def GetFilenameList(sensor_list='CAM_FRONT',scene_id=0):
 		current_sample = nusc.get('sample', current_sample["next"])
 	return filename_list
 
-def GetSensorCalibration(sensor_list='CAM_FRONT',scene_id=0):
+def GetSensorCalibration(sensor_list=['CAM_FRONT'],scene_id=0):
 
 	# Get the first sample in the selected scene
 	current_sample = nusc.get('sample', nusc.scene[scene_id]['first_sample_token'])
